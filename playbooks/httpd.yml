@@ -1,0 +1,111 @@
+---
+- name: Setup Apache HTTP Server
+  hosts: all
+  become: true
+  vars:
+      htaccess_file: /var/www/content/.htaccess
+      htpasswd_file: /var/www/.htpasswd
+      user_name: admin
+      user_passwd: test1
+      vhost_port: 80
+  pre_tasks:
+    - name: Install and enable Apache HTTP Server
+      ansible.builtin.import_tasks: ../tasks/install_and_enable_svc.yml
+      vars:
+        pkg_name: httpd
+        pkg_version: latest
+        svc_name: httpd
+      
+    - name: Ensure .htpasswd is present
+      ansible.builtin.command:
+        cmd: "htpasswd -b -c {{ htpasswd_file }} {{ user_name }} {{ user_passwd }}"
+        creates: "{{ htpasswd_file }}"
+
+    - name: Ensure .htaccess is present
+      ansible.builtin.template:
+        src: ../templates/htaccess.j2
+        dest: "{{ htaccess_file }}"
+    
+    - name: Ensure index.html exist
+      ansible.builtin.lineinfile:
+        path: /var/www/content/index.html
+        line: Hello!
+        state: present
+        create: true
+
+    - name: Ensure virtual host is present
+      ansible.builtin.template:
+        src: ../templates/vhost.conf.j2
+        dest: /etc/httpd/conf.d/vhost.conf
+      notify: Restart httpd
+
+  roles:
+    - name: redhat.rhel_system_roles.selinux
+      selinux_policy: targeted
+      selinux_state: enforcing
+      selinux_restore_dirs:
+        - /var/www
+
+  tasks:
+    - name: Test web content
+      ansible.builtin.uri:
+        url: "http://{{ ansible_hostname }}"
+        user: "{{ user_name }}"
+        password: "{{ user_passwd }}"
+        force_basic_auth: true
+      register: result
+      become: false
+
+    - name: Assert web content is reacheable
+      ansible.builtin.assert:
+        that:
+          - result.status == 200
+        success_msg: Apache HTTP Server running fine!
+
+    - name: Test web security
+      ansible.builtin.uri:
+        url: "http://{{ ansible_hostname }}"
+        status_code:
+          - 401
+      register: result
+      become: false
+
+    - name: Assert web content is secure
+      ansible.builtin.assert:
+        that:
+          - result.status == 401
+        success_msg: Apache HTTP Server is secure!
+
+  handlers:
+    - name: Restart httpd
+      ansible.builtin.service:
+        name: httpd
+        state: restarted
+
+- name: Setup Apache HTTP Server 82
+  hosts: all
+  become: true
+  vars:
+      vhost_port: 82
+  
+  roles:
+    - name: redhat.rhel_system_roles.selinux
+      selinux_ports:
+        - ports: 82
+          proto: tcp
+          setype: http_port_t
+          state: present
+          local: true
+
+  tasks:
+    - name: Ensure vhost port {{ vhost_port }} exist
+      ansible.builtin.template:
+        src: ../templates/vhost.conf.j2
+        dest: "/etc/httpd/conf.d/vhost{{ vhost_port }}.conf"
+      notify: Restart httpd
+
+  handlers:
+    - name: Restart httpd
+      ansible.builtin.service:
+        name: httpd
+        state: restarted

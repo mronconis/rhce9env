@@ -1,0 +1,16 @@
+---
+- name: Setup network
+  hosts: dev
+  become: true
+  roles:
+  - name: redhat.rhel_system_roles.network
+    network_connections:
+      - name: eth2
+        state: up
+        persistent_state: present
+        type: ethernet
+        ip:
+          address:
+            - 10.11.2.2/24
+          dns:
+            - 8.8.8.8

@@ -1,0 +1,7 @@
+.venv
+.vagrant
+.collections
+.vscode
+*.tar.gz
+*.vdi
+*.log

@@ -1,0 +1,12 @@
+---
+- name: Setup Storage
+  ansible.builtin.import_playbook: storage.yml
+
+- name: Setup Network
+  ansible.builtin.import_playbook: network.yml
+
+- name: Setup Apache HTTP Server
+  ansible.builtin.import_playbook: httpd.yml
+
+- name: Setup User and Group
+  ansible.builtin.import_playbook: user.yml

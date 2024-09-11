@@ -1,0 +1,5 @@
+collections:
+  - name: redhat.rhel_system_roles
+    type: file
+    source: "redhat-rhel_system_roles-1.23.0.tar.gz"
+  - name: ansible.posix

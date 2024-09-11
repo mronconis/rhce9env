@@ -1,0 +1,11 @@
+---
+- name: Ensure package {{ pkg_name }} is installed
+  ansible.builtin.package:
+    name: "{{ pkg_name }}"
+    state: "{{ pkg_version }}"
+
+- name: Ensure service {{ svc_name }} is enabled and running
+  ansible.builtin.service:
+    name: "{{ svc_name }}"
+    enabled: true
+    state: started

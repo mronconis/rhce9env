@@ -1,0 +1,33 @@
+---
+- name: Setup users
+  hosts: all
+  become: true
+  vars:
+    users:
+      - name: dev1
+        pwdhash: dev1
+        groups: dev,mngr
+      - name: dev2
+        pwdhash: dev2
+        groups: dev
+      - name: ops1
+        pwdhash: ops1
+        groups: ops,mngr
+      - name: ops2
+        pwdhash: ops2
+        groups: ops
+  tasks:
+    
+    - name: Ensure groups exist
+      ansible.builtin.group:
+        name: "{{ item }}"
+        state: present
+      loop: "{{ users | map(attribute='groups') | map('split',',') | flatten | unique }}"
+
+    - name: Ensure users exist
+      ansible.builtin.user:
+        name: "{{ item['name'] }}"
+        password: "{{ item['pwdhash'] | password_hash('sha512') }}"
+        groups: "{{ item['groups'] }}"
+        append: true
+      loop: "{{ users }}"

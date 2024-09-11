@@ -1,0 +1,63 @@
+---
+- name: Setup storage volume
+  hosts: dev
+  become: true
+  roles:
+    - name: redhat.rhel_system_roles.storage
+      storage_volumes:
+        - name: content
+          type: disk
+          disks:
+            - sdb
+          fs_type: xfs
+          mount_point: /var/www/content
+          state: present
+
+- name: Setup storage partition
+  hosts: dev
+  become: true
+  tasks:
+    - name: Ensure partition exist
+      ansible.builtin.command:
+        cmd: parted --script /dev/sdc mklabel gpt mkpart primary xfs 1MiB 512MiB
+        creates: /dev/sdc1
+
+    - name: Make XFS filesystem on /dev/sdc1
+      ansible.builtin.command:
+        cmd: mkfs -t xfs /dev/sdc1
+      when: ansible_facts.mounts | selectattr('device', 'in', '/dev/sdc1') | list | length == 0
+
+    - name: Ensure mount point dir exist
+      ansible.builtin.file:
+        path: /var/www/upload
+        state: directory
+
+    - name: Mount upload dir
+      ansible.posix.mount:
+        path: /var/www/upload
+        src: /dev/sdc1
+        fstype: xfs
+        state: mounted
+
+- name: Setup storage pool
+  hosts: prod
+  become: true
+  roles:
+    - name: redhat.rhel_system_roles.storage
+      storage_pools:
+        - name: vg_web
+          type: lvm
+          disks:
+            - sdb
+            - sdc
+          volumes:
+            - name: lv_content
+              size: 500m
+              fs_type: xfs
+              mount_point: /var/www/content
+              state: present
+            - name: lv_upload
+              size: 1g
+              fs_type: xfs
+              mount_point: /var/www/upload
+              state: present

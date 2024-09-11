@@ -1,0 +1,15 @@
+{% if vhost_port != 80 %}
+Listen {{ vhost_port }}
+{% endif%}
+
+<VirtualHost *:{{ vhost_port }}>
+    DocumentRoot "/var/www/content/"
+    ServerName server1
+    CustomLog /var/log/httpd/vhost_{{ vhost_port }}_access.log combined
+    ErrorLog /var/log/httpd/vhost_{{ vhost_port }}_error.log
+    <Directory "/var/www/content">
+        Options Indexes FollowSymLinks
+        AllowOverride All
+        Require all granted
+    </Directory>
+</VirtualHost>
